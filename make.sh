@@ -1,0 +1,1 @@
+g++ main.cpp Huffman.cpp mytar.cpp -o cp -std=c++17
