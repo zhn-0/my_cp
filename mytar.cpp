@@ -3,7 +3,7 @@
 static std::map<ino_t, std::string> inodeToPath;
 
 // 填补空白
-void writePadding(int dstFd, size_t size)
+static void writePadding(int dstFd, size_t size)
 {
     int padd = size % BLOCKSIZE;
     unsigned char c = 0;
@@ -15,7 +15,7 @@ void writePadding(int dstFd, size_t size)
 }
 
 // 计算TarHeader的校验和
-void calChecksum(union TarHeader *pheader)
+static void calHeaderChecksum(union TarHeader *pheader)
 {
     unsigned char chksum = 0;
     for (int i = 0; i < BLOCKSIZE; ++i)
@@ -23,7 +23,19 @@ void calChecksum(union TarHeader *pheader)
     sprintf(pheader->checksum, "%o", chksum);
 }
 
-void fillTarHeader(union TarHeader *pheader, char *src)
+static void calFileChecksum(union TarHeader *pheader, int fd, off_t fileBeg)
+{
+    unsigned char chksum = 0;
+    char c;
+    lseek(fd, fileBeg, SEEK_SET);
+    while(read(fd, &c, sizeof(c)) > 0)
+    {
+        chksum += (unsigned char)c;
+    }
+    sprintf(pheader->devMajor, "%o", chksum);
+}
+
+static void fillTarHeader(union TarHeader *pheader, char *src)
 {
     struct stat srcStat;
     lstat(src, &srcStat);
@@ -60,6 +72,10 @@ void fillTarHeader(union TarHeader *pheader, char *src)
     {
         sprintf(&pheader->type, "%c", SYMLINK);
     }
+    else if(S_ISFIFO(srcStat.st_mode))
+    {
+        sprintf(&pheader->type, "%c", FIFO);
+    }
 }
 
 int copyLink(char *src, int dstFd, ino_t inode)
@@ -70,7 +86,7 @@ int copyLink(char *src, int dstFd, ino_t inode)
     sprintf(header.size, "%lo", 0UL);
     sprintf(header.linkName, "%s", inodeToPath[inode].c_str());
 
-    calChecksum(&header);
+    calHeaderChecksum(&header);
 
     write(dstFd, header.block, sizeof(header.block));
     return 0;
@@ -84,7 +100,20 @@ int copySymlink(char *src, int dstFd)
     sprintf(header.size, "%lo", 0UL);
     readlink(src, header.linkName, 100);
 
-    calChecksum(&header);
+    calHeaderChecksum(&header);
+
+    write(dstFd, header.block, sizeof(header.block));
+    return 0;
+}
+
+int copyFifo(char *src, int dstFd)
+{
+    union TarHeader header;
+    fillTarHeader(&header, src);
+
+    sprintf(header.size, "%lo", 0UL);
+
+    calHeaderChecksum(&header);
 
     write(dstFd, header.block, sizeof(header.block));
     return 0;
@@ -123,8 +152,9 @@ int copyReg(char *src, int dstFd)
     writePadding(dstFd, size);
 
     fillTarHeader(&header, src);
+    calFileChecksum(&header, dstFd, fileBeg);
     sprintf(header.size, "%lo", size);
-    calChecksum(&header);
+    calHeaderChecksum(&header);
 
     inodeToPath[srcStat.st_ino] = std::string(header.prefix) + "/" + std::string(header.name);
 
@@ -149,7 +179,7 @@ int copyDir(char *src, int dstFd)
 
     union TarHeader header;
     fillTarHeader(&header, src);
-    calChecksum(&header);
+    calHeaderChecksum(&header);
     write(dstFd, header.block, sizeof(header.block));
     struct dirent *copyFile;
     struct stat copyFileStat;
@@ -158,12 +188,21 @@ int copyDir(char *src, int dstFd)
         if(strcmp(copyFile->d_name, ".") == 0 || strcmp(copyFile->d_name, "..") == 0)continue;
         sprintf(copyFileSrc, "%s/%s", src, copyFile->d_name);
         lstat(copyFileSrc, &copyFileStat);
-        if(S_ISDIR(copyFileStat.st_mode)){
+        if(S_ISDIR(copyFileStat.st_mode))
+        {
             copyDir(copyFileSrc, dstFd);
-        }else if(S_ISREG(copyFileStat.st_mode)){
+        }
+        else if(S_ISREG(copyFileStat.st_mode))
+        {
             copyReg(copyFileSrc, dstFd);
-        }else if(S_ISLNK(copyFileStat.st_mode)){
+        }
+        else if(S_ISLNK(copyFileStat.st_mode))
+        {
             copySymlink(copyFileSrc, dstFd);
+        }
+        else if(S_ISFIFO(copyFileStat.st_mode))
+        {
+            copyFifo(copyFileSrc, dstFd);
         }
     }
 
@@ -189,6 +228,42 @@ public:
     }
 };
 
+// 用校验和检验文件是否出错
+void checkHeaderChecksum(union TarHeader *pheader)
+{
+    unsigned char chksum = 0, rchksum = 0;
+    sscanf(pheader->checksum, "%o", &rchksum);
+    for(int i=0;i<BLOCKSIZE;++i)
+    {
+        if(i>=148 && i<156)continue;
+        chksum += (unsigned char)pheader->block[i];
+    }
+    if(chksum != rchksum)
+    {
+        fprintf(stderr, "%s file corruption\n", pheader->name);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void checkFileChecksum(union TarHeader *pheader, int fd, size_t sz)
+{
+    off_t fileBeg = lseek(fd, 0, SEEK_CUR);
+    unsigned char chksum = 0, rchksum = 0;
+    char c;
+    sscanf(pheader->devMajor, "%o", &rchksum);
+    while(sz--)
+    {
+        read(fd, &c, sizeof(c));
+        chksum += (unsigned char)c;
+    }
+    if(chksum != rchksum)
+    {
+        fprintf(stderr, "%s file corruption\n", pheader->name);
+        exit(EXIT_FAILURE);
+    }
+    lseek(fd, fileBeg, SEEK_SET);
+}
+
 int unpackFile(char *src)
 {
     uid_t uid;
@@ -206,6 +281,7 @@ int unpackFile(char *src)
     struct DirTime *vhead = new DirTime(NULL, 0), *p = vhead;
     while(read(srcFd, header.block, sizeof(header.block)) == 512)
     {
+        checkHeaderChecksum(&header);
         type = header.type;
         sscanf(header.uid, "%o", &uid);
         sscanf(header.gid, "%o", &gid);
@@ -225,6 +301,7 @@ int unpackFile(char *src)
                 perror("fchown");
                 return -1;
             }
+            checkFileChecksum(&header, srcFd, size);
             uncompress(srcFd, dstFd, size);
             // 不足512字节会补零 需跳过
             off_t oft = (512 - size % 512) % 512;
@@ -259,6 +336,11 @@ int unpackFile(char *src)
         else if(type == SYMLINK)
         {
             symlink(header.linkName, dst);
+            utimensat(AT_FDCWD, dst, times, AT_SYMLINK_NOFOLLOW);
+        }
+        else if(type == FIFO)
+        {
+            mkfifo(dst, mode);
             utimensat(AT_FDCWD, dst, times, AT_SYMLINK_NOFOLLOW);
         }
     }
