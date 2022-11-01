@@ -10,11 +10,6 @@
 
 int main(int argc, char *argv[])
 {
-    // char path[] = "tmpFile";
-    // if(argv[1][0] == '0')pack();
-    // else if(argv[1][0] == '1')recover(path);
-    // test();
-
     generateAesKey((unsigned char *)"hello");
     if(argv[1][0] == '0')
     {
