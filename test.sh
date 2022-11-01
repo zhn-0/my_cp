@@ -1,4 +1,1 @@
-rm -r /home/zhn/a
-rm -r /home/zhn/b/a
-./cp ./a /home/zhn -b
-./cp /home/zhn/a /home/zhn/b -r
+g++ test.cpp crypto.cpp Huffman.cpp mytar.cpp -lcrypto -std=c++17

@@ -210,6 +210,36 @@ int copyDir(char *src, int dstFd)
     return 0;
 }
 
+int backup(char *src, int dstFd)
+{
+    int tmpFd = open(".tmpfile_for_encrypto", O_RDWR | O_CREAT | O_TRUNC, 0777);
+    struct stat srcStat;
+    lstat(src, &srcStat);
+    if (S_ISDIR(srcStat.st_mode))
+    {
+        copyDir(src, tmpFd);
+    }
+    else if (S_ISREG(srcStat.st_mode))
+    {
+        copyReg(src, tmpFd);
+    }
+    else if (S_ISLNK(srcStat.st_mode))
+    {
+        copySymlink(src, tmpFd);
+    }
+    else if (S_ISFIFO(srcStat.st_mode))
+    {
+        copyFifo(src, tmpFd);
+    }
+    
+    lseek(tmpFd, 0, SEEK_SET);
+    encrypt(tmpFd, dstFd);
+    
+    close(tmpFd);
+    unlink(".tmpfile_for_encrypto");
+    return 0;
+}
+
 class DirTime
 {
 public:
@@ -232,7 +262,7 @@ public:
 void checkHeaderChecksum(union TarHeader *pheader)
 {
     unsigned char chksum = 0, rchksum = 0;
-    sscanf(pheader->checksum, "%o", &rchksum);
+    sscanf(pheader->checksum, "%hho", &rchksum);
     for(int i=0;i<BLOCKSIZE;++i)
     {
         if(i>=148 && i<156)continue;
@@ -250,7 +280,7 @@ void checkFileChecksum(union TarHeader *pheader, int fd, size_t sz)
     off_t fileBeg = lseek(fd, 0, SEEK_CUR);
     unsigned char chksum = 0, rchksum = 0;
     char c;
-    sscanf(pheader->devMajor, "%o", &rchksum);
+    sscanf(pheader->devMajor, "%hho", &rchksum);
     while(sz--)
     {
         read(fd, &c, sizeof(c));
@@ -264,7 +294,7 @@ void checkFileChecksum(union TarHeader *pheader, int fd, size_t sz)
     lseek(fd, fileBeg, SEEK_SET);
 }
 
-int unpackFile(char *src)
+int unpackFile(int srcFd)
 {
     uid_t uid;
     gid_t gid;
@@ -272,9 +302,8 @@ int unpackFile(char *src)
     mode_t mode;
     size_t size;
     struct timespec times[2];
-    int srcFd, dstFd;
+    int dstFd;
     char type, dst[256];
-    srcFd = open(src, O_RDONLY);
     times[0].tv_nsec = UTIME_NOW;
     
     union TarHeader header;
@@ -344,7 +373,6 @@ int unpackFile(char *src)
             utimensat(AT_FDCWD, dst, times, AT_SYMLINK_NOFOLLOW);
         }
     }
-    close(srcFd);
 
     p = vhead->nxt;
     while(p)
@@ -354,6 +382,24 @@ int unpackFile(char *src)
         p = p->nxt;
     }
     delete vhead;
+
+    return 0;
+}
+
+int recover(char *src)
+{
+    int tmpFd = open(".tmpfile_for_decrypto", O_RDWR | O_CREAT | O_TRUNC, 0777);
+    int srcFd = open(src, O_RDONLY);
+
+    decrypt(srcFd, tmpFd);
+
+    lseek(tmpFd, 0, SEEK_SET);
+    unpackFile(tmpFd);
+
+    unlink(".tmpfile_for_decrypto");
+
+    close(tmpFd);
+    close(srcFd);
 
     return 0;
 }

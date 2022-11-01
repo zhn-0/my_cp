@@ -5,10 +5,10 @@
 #include <pwd.h>
 #include <grp.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <dirent.h>
 #include <libgen.h>
 #include <sys/time.h>
+#include "crypto.hpp"
 #include "Huffman.hpp"
 
 #define BLOCKSIZE   512
@@ -58,7 +58,7 @@ union TarHeader
     char block[512];
 };
 
-int copyDir(char *src, int dstFd);
-int unpackFile(char *src);
+int backup(char *src, int dstFd);
+int recover(char *src);
 
 #endif
