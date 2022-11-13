@@ -1,4 +1,3 @@
-#include <map>
 #include <stdio.h>
 #include <iostream>
 #include <fcntl.h>
@@ -8,31 +7,45 @@
 
 int main(int argc, char *argv[])
 {
-    if(argc != 3){
-        fprintf(stderr, "Usage: %s <src_file> <dst_dir>\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
+    // if(argc != 3){
+    //     fprintf(stderr, "Usage: %s <src_file> <dst_dir>\n", argv[0]);
+    //     exit(EXIT_FAILURE);
+    // }
 
-    char *src = argv[1], *dst = argv[2];
-    struct stat srcStat, dstStat;
-    if(lstat(src, &srcStat) == -1){
-        perror("lstat");
-        exit(EXIT_FAILURE);
+    char src[256], dst[256], pwd[256];
+    int op=0;
+    puts("Please input 1 for Backup or 2 for Recover");
+    scanf("%d", &op);
+    if(op==1)
+    {
+        puts("Please input the file you want to backup:");
+        scanf("%s", src);
+        puts("Please input the position you want to save the backup file:");
+        scanf("%s", dst);
+        if (strcmp(src, dst) == 0)
+        {
+            fprintf(stderr, "src and dst can not be same\n");
+            exit(EXIT_FAILURE);
+        }
+        puts("Please input the password that will be used in the encrypto:");
+        scanf("%s", pwd);
+        generateAesKey((unsigned char*)pwd);
+        int dstFd = open(dst, O_RDWR | O_CREAT | O_TRUNC, 0777);
+        backup(src, dstFd);
     }
-    if(lstat(dst, &dstStat) == -1){
-        perror("lstat");
-        exit(EXIT_FAILURE);
+    else if(op==2)
+    {
+        puts("Please input the file you want to recover:");
+        scanf("%s", src);
+        puts("Please input the decrypto password:");
+        scanf("%s", pwd);
+        generateAesKey((unsigned char *)pwd);
+        recover(src);
     }
-    if(!S_ISDIR(dstStat.st_mode)){
-        fprintf(stderr, "dst_pathname is not a dir\n");
+    else
+    {
+        fprintf(stderr, "Wrong operation\n");
         exit(EXIT_FAILURE);
-    }
-    int dstFd = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0);
-
-    if(S_ISDIR(srcStat.st_mode)){
-        copyDir(src, dstFd);
-    }else{
-
     }
     
     return 0;

@@ -73,7 +73,7 @@ int compress(int srcFd, int dstFd)
     if((ret = write(dstFd, t.freq, sizeof(t.freq)))<0)
     {
         perror("write");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
     lseek(srcFd, 0, SEEK_SET);
@@ -118,7 +118,7 @@ int uncompress(int srcFd, int dstFd, size_t size)
     if((readNum = read(srcFd, t.freq, sizeof(t.freq))) < 0)
     {
         perror("read");
-        return -1;
+        exit(EXIT_FAILURE);
     }
     t.createTree();
 

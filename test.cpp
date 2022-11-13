@@ -3,8 +3,6 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <libgen.h>
-#include <pwd.h>
-#include <grp.h>
 #include <sys/time.h>
 #include "mytar.hpp"
 

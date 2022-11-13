@@ -10,6 +10,8 @@ int generateAesKey(unsigned char *pwd)
 
 int encrypt(int srcFd, int dstFd)
 {
+    write(dstFd, myAesKey, MD5_DIGEST_LENGTH);
+
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     EVP_CIPHER_CTX_init(ctx);
 
@@ -25,8 +27,8 @@ int encrypt(int srcFd, int dstFd)
         if (!EVP_EncryptUpdate(ctx, bufOut, &outlen, bufIn, n))
         {
             EVP_CIPHER_CTX_free(ctx);
-            perror("Encrypt update");
-            return 1;
+            fprintf(stderr, "Encrypt update failed\n");
+            exit(EXIT_FAILURE);
         }
         write(dstFd, bufOut, outlen);
     }
@@ -35,7 +37,8 @@ int encrypt(int srcFd, int dstFd)
     if (!EVP_EncryptFinal_ex(ctx, bufOut + outlen, &tmplen))
     {
         EVP_CIPHER_CTX_free(ctx);
-        return 1;
+        fprintf(stderr, "Encrypt final failed\n");
+        exit(EXIT_FAILURE);
     }
 
     write(dstFd, bufOut + outlen, tmplen);
@@ -47,6 +50,17 @@ int encrypt(int srcFd, int dstFd)
 
 int decrypt(int srcFd, int dstFd)
 {
+    unsigned char pwd[MD5_DIGEST_LENGTH];
+    read(srcFd, pwd, MD5_DIGEST_LENGTH);
+    for(int i=0;i<MD5_DIGEST_LENGTH;++i)
+    {
+        if(pwd[i]!=myAesKey[i])
+        {
+            fprintf(stderr, "Wrong Password\n");
+            unlink(".tmpfile_for_decrypto");
+            exit(EXIT_FAILURE);
+        }
+    }
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
     EVP_CIPHER_CTX_init(ctx);
 
@@ -62,8 +76,8 @@ int decrypt(int srcFd, int dstFd)
         if (!EVP_DecryptUpdate(ctx, bufOut, &outlen, bufIn, n))
         {
             EVP_CIPHER_CTX_free(ctx);
-            perror("Decrypt update");
-            return 1;
+            fprintf(stderr, "Decrypt update failed\n");
+            exit(EXIT_FAILURE);
         }
         write(dstFd, bufOut, outlen);
     }
@@ -72,7 +86,8 @@ int decrypt(int srcFd, int dstFd)
     if (!EVP_DecryptFinal_ex(ctx, bufOut + outlen, &tmplen))
     {
         EVP_CIPHER_CTX_free(ctx);
-        return 1;
+        fprintf(stderr, "Decrypt final failed\n");
+        exit(EXIT_FAILURE);
     }
 
     write(dstFd, bufOut + outlen, tmplen);

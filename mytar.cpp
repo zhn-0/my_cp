@@ -125,7 +125,7 @@ int copyReg(char *src, int dstFd)
     struct stat srcStat;
     if((srcFd = open(src, O_RDONLY)) < 0)
     {
-        fprintf(stderr, "%s failed to open\n", src);
+        fprintf(stderr, "%s: open failed\n\n", src);
         exit(EXIT_FAILURE);
     }
     stat(src, &srcStat);
@@ -170,7 +170,7 @@ int copyDir(char *src, int dstFd)
 {
     DIR *srcDir;
     if((srcDir = opendir(src)) == NULL){
-        fprintf(stderr, "%s failed to open\n", src);
+        fprintf(stderr, "%s: open failed\n", src);
         exit(EXIT_FAILURE);
     }
 
@@ -270,7 +270,7 @@ void checkHeaderChecksum(union TarHeader *pheader)
     }
     if(chksum != rchksum)
     {
-        fprintf(stderr, "%s file corruption\n", pheader->name);
+        fprintf(stderr, "%s: corruption\n", pheader->name);
         exit(EXIT_FAILURE);
     }
 }
@@ -288,7 +288,7 @@ void checkFileChecksum(union TarHeader *pheader, int fd, size_t sz)
     }
     if(chksum != rchksum)
     {
-        fprintf(stderr, "%s file corruption\n", pheader->name);
+        fprintf(stderr, "%s: corruption\n", pheader->name);
         exit(EXIT_FAILURE);
     }
     lseek(fd, fileBeg, SEEK_SET);
@@ -322,13 +322,13 @@ int unpackFile(int srcFd)
         {
             if((dstFd = open(dst, O_WRONLY | O_CREAT | O_TRUNC, mode)) < 0)
             {
-                perror("creat");
-                return -1;
+                fprintf(stderr, "%s: create failed\n", dst);
+                exit(EXIT_FAILURE);
             }
             if(fchown(dstFd, uid, gid) < 0)
             {
-                perror("fchown");
-                return -1;
+                fprintf(stderr, "%s: fchown failed", dst);
+                exit(EXIT_FAILURE);
             }
             checkFileChecksum(&header, srcFd, size);
             uncompress(srcFd, dstFd, size);
@@ -345,12 +345,12 @@ int unpackFile(int srcFd)
                 if(mkdir(dst, mode) < 0)
                 {
                     fprintf(stderr, "%s: mkdir failed\n", dst);
-                    return -1;
+                    exit(EXIT_FAILURE);
                 }
                 if (chown(dst, uid, gid) < 0)
                 {
                     fprintf(stderr, "%s: chown failed\n", dst);
-                    return -1;
+                    exit(EXIT_FAILURE);
                 }
                 dstDir = opendir(dst);
             }
