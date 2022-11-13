@@ -1,1 +1,0 @@
-g++ test.cpp crypto.cpp Huffman.cpp mytar.cpp -lcrypto -std=c++17
