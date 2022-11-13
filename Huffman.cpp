@@ -53,9 +53,11 @@ int HuffmanTree::createTree()
         q.push({p, val1 + val2});
     }
 
-    root = q.top().first;
-
-    traverseHuffmanTree(root, "");
+    if(q.size()==1)
+    {
+        root = q.top().first;
+        traverseHuffmanTree(root, "");
+    }
 
     return 0;
 }

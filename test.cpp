@@ -12,7 +12,8 @@ int main(int argc, char *argv[])
     if(argv[1][0] == '0')
     {
         int dstFd = open("tmp", O_RDWR | O_CREAT | O_TRUNC, 0777);
-        backup("./asd", dstFd);
+        backup("../compiler", dstFd);
+        // backup("tmpf", dstFd);
     }
     else recover("tmp");
 

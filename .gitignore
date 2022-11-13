@@ -1,4 +1,4 @@
-*.out
-*.sh
 asd/
 tmp*
+*.o
+cp

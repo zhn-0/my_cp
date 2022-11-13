@@ -144,7 +144,7 @@ int copyReg(char *src, int dstFd)
     write(dstFd, header.block, sizeof(header.block));
 
     fileBeg = lseek(dstFd, 0, SEEK_CUR);
-    size_t ret = compress(srcFd, dstFd);
+    if(srcStat.st_size)compress(srcFd, dstFd);
     fileEnd = lseek(dstFd, 0, SEEK_CUR);
 
     // 获得压缩文件大小
@@ -331,7 +331,7 @@ int unpackFile(int srcFd)
                 exit(EXIT_FAILURE);
             }
             checkFileChecksum(&header, srcFd, size);
-            uncompress(srcFd, dstFd, size);
+            if(size)uncompress(srcFd, dstFd, size);
             // 不足512字节会补零 需跳过
             off_t oft = (512 - size % 512) % 512;
             lseek(srcFd, oft, SEEK_CUR);
