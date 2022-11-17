@@ -56,7 +56,7 @@ int decrypt(int srcFd, int dstFd)
     {
         if(pwd[i]!=myAesKey[i])
         {
-            fprintf(stderr, "Wrong Password\n");
+            fprintf(stderr, "Wrong Password or maybe this is not a backup-file\n");
             unlink(".tmpfile_for_decrypto");
             exit(EXIT_FAILURE);
         }

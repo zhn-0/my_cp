@@ -213,7 +213,7 @@ int copyDir(char *src, int dstFd)
 int backup(char *src, char *dst)
 {
     struct stat srcStat;
-    if(lstat(src, &srcStat)==-1)
+    if(lstat(src, &srcStat)!=0)
     {
         printf("%s not exist\n", src);
         exit(EXIT_FAILURE);

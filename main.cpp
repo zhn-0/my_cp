@@ -13,8 +13,15 @@ int main(int argc, char *argv[])
     scanf("%d", &op);
     if(op==1)
     {
-        puts("Please input the file you want to backup:");
-        scanf("%s", src);
+        while(1)
+        {
+            puts("Please input the file you want to backup:");
+            scanf("%s", src);
+            struct stat st;
+            if(lstat(src, &st)==0)break;
+            fflush(stdout);
+            printf("\n%s not exist, please retry\n", src);
+        }
         puts("Please input the position you want to save the backup file:");
         scanf("%s", dst);
         if (strcmp(src, dst) == 0)
