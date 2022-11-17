@@ -210,11 +210,16 @@ int copyDir(char *src, int dstFd)
     return 0;
 }
 
-int backup(char *src, int dstFd)
+int backup(char *src, char *dst)
 {
-    int tmpFd = open(".tmpfile_for_encrypto", O_RDWR | O_CREAT | O_TRUNC, 0777);
     struct stat srcStat;
-    lstat(src, &srcStat);
+    if(lstat(src, &srcStat)==-1)
+    {
+        printf("%s not exist\n", src);
+        exit(EXIT_FAILURE);
+    }
+    int tmpFd = open(".tmpfile_for_encrypto", O_RDWR | O_CREAT | O_TRUNC, 0777);
+    int dstFd = open(dst, O_RDWR | O_CREAT | O_TRUNC, 0777);
     if (S_ISDIR(srcStat.st_mode))
     {
         copyDir(src, tmpFd);
@@ -320,6 +325,7 @@ int unpackFile(int srcFd)
         sprintf(dst, "%s/%s", header.prefix, header.name);
         if(type == NORMAL)
         {
+            unlink(dst);
             if((dstFd = open(dst, O_WRONLY | O_CREAT | O_TRUNC, mode)) < 0)
             {
                 fprintf(stderr, "%s: create failed\n", dst);

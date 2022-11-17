@@ -1,4 +1,6 @@
 asd/
 tmp*
 *.o
+*.out
 cp
+lpue*

@@ -8,14 +8,16 @@
 
 int main(int argc, char *argv[])
 {
-    generateAesKey((unsigned char *)"hello");
-    if(argv[1][0] == '0')
-    {
+    // generateAesKey((unsigned char *)"hello");
+    // if(argv[1][0] == '0')
+    // {
+        struct stat st;
         int dstFd = open("tmp", O_RDWR | O_CREAT | O_TRUNC, 0777);
-        backup("../compiler", dstFd);
+        // backup("~/lpue", dstFd);
         // backup("tmpf", dstFd);
-    }
-    else recover("tmp");
+    // }
+    // else 
+        // recover("tmp");
 
     return 0;
 }

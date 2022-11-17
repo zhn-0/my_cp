@@ -7,11 +7,6 @@
 
 int main(int argc, char *argv[])
 {
-    // if(argc != 3){
-    //     fprintf(stderr, "Usage: %s <src_file> <dst_dir>\n", argv[0]);
-    //     exit(EXIT_FAILURE);
-    // }
-
     char src[256], dst[256], pwd[256];
     int op=0;
     puts("Please input 1 for Backup or 2 for Recover");
@@ -23,15 +18,14 @@ int main(int argc, char *argv[])
         puts("Please input the position you want to save the backup file:");
         scanf("%s", dst);
         if (strcmp(src, dst) == 0)
-        {
+        { 
             fprintf(stderr, "src and dst can not be same\n");
             exit(EXIT_FAILURE);
         }
         puts("Please input the password that will be used in the encrypto:");
         scanf("%s", pwd);
         generateAesKey((unsigned char*)pwd);
-        int dstFd = open(dst, O_RDWR | O_CREAT | O_TRUNC, 0777);
-        backup(src, dstFd);
+        backup(src, dst);
     }
     else if(op==2)
     {

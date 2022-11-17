@@ -58,7 +58,7 @@ union TarHeader
     char block[512];
 };
 
-int backup(char *src, int dstFd);
+int backup(char *src, char *dst);
 int recover(char *src);
 
 #endif
