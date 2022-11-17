@@ -26,6 +26,7 @@ int main(int argc, char *argv[])
         }
         puts("Please input the position you want to save the backup file:");
         scanf("%s", dst);
+        printf("\033c");
         if (strcmp(src, dst) == 0)
         { 
             fprintf(stderr, "src and dst can not be same\n");
