@@ -31,11 +31,12 @@ int main(int argc, char *argv[])
             fprintf(stderr, "src and dst can not be same\n");
             exit(EXIT_FAILURE);
         }
-        printf("\033c");
         puts("Please input the password that will be used in the encrypto:");
         scanf("%s", pwd);
+        printf("\033c");
         generateAesKey((unsigned char*)pwd);
         backup(src, dst);
+        puts("backup over");
     }
     else if(op==2)
     {
@@ -48,11 +49,12 @@ int main(int argc, char *argv[])
             if(lstat(src, &st)==0)break;
             printf("%s not exist, please retry\n", src);
         }
-        printf("\033c");
         puts("Please input the decrypto password:");
         scanf("%s", pwd);
+        printf("\033c");
         generateAesKey((unsigned char *)pwd);
         recover(src);
+        puts("recover over");
     }
     else
     {
